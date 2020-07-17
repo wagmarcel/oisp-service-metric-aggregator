@@ -5,10 +5,9 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.oisp.services.conf.CmdlineOptions;
 import org.oisp.services.conf.Config;
-import org.oisp.services.conf.ExternalConfig;
 import org.oisp.services.pipeline.FullPipelineBuilder;
 
-import java.util.Base64;
+import java.util.HashMap;
 
 
 /**
@@ -29,14 +28,16 @@ public abstract class MetricsAggregator {
         Pipeline fullPipeline;
 
         //read json config from ENVIRONMENT - needed because stupid mvn cannot read JSON from cmdline. Unbelievable, but true.
-        String inputConfig = ((CmdlineOptions) options).getJSONConfig().replaceAll(" ", "\n");
-        String config = new String(Base64.getMimeDecoder().decode(inputConfig));
+        String metricsTopic = ((CmdlineOptions) options).getMetricsTopic();
+        String bootstrapServers = ((CmdlineOptions) options).getBootstrapServers();
 
-        System.out.println("JSON config retrieved: " + config);
-        ExternalConfig extConf = ExternalConfig.getConfigFromString(config);
-        Config conf;
-        conf = extConf.getConfig();
-        fullPipeline = FullPipelineBuilder.build(options, conf);
+        HashMap<String, Object> config = new HashMap<>();
+
+        config.put(Config.KAFKA_METRICS_TOPIC, metricsTopic);
+        config.put(Config.KAFKA_BOOTSTRAP_SERVERS, bootstrapServers);
+
+
+        fullPipeline = FullPipelineBuilder.build(options, config);
         fullPipeline.run().waitUntilFinish();
     }
 }
