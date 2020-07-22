@@ -41,7 +41,7 @@ public class KafkaSourceProcessor {
         String serverUri = userConfig.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
 
         Map<String, Object> consumerProperties = new HashMap<>();
-        consumerProperties.put("group.id", "beam");
+        consumerProperties.put("group.id", "aggregator");
         consumerProperties.put("enable.auto.commit", "true");
         consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
