@@ -26,6 +26,7 @@ import java.util.Map;
 
 public class Observation implements Serializable {
 
+    public Observation(){}
     private String aid;
     private String cid;
     private Long on;

@@ -23,6 +23,7 @@ import org.joda.time.Duration;
 import org.apache.beam.sdk.Pipeline;
 import org.joda.time.LocalDateTime;
 import org.oisp.services.collection.Observation;
+import org.oisp.services.collection.ObservationList;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
 import org.oisp.services.transformation.KafkaSourceObservationsProcessor;
@@ -94,13 +95,13 @@ public final class FullPipelineBuilder {
     }
 
     // Distribute elements with cid key
-    static class KafkaToObservationFn extends DoFn<KafkaRecord<String, byte[]>, KV<String, Observation>> {
+    static class KafkaToObservationFn extends DoFn<KafkaRecord<String, ObservationList>, KV<String, Observation>> {
         @ProcessElement
         public void processElement(ProcessContext c, @Timestamp Instant inputTimestamp) {
-            KafkaRecord<String, byte[]> record = c.element();
-            Gson g = new Gson();
-            List<Observation> observations = new ArrayList<Observation>();
-            try {
+            /*KafkaRecord<String, byte[]> record = c.element();
+            Gson g = new Gson();*/
+            ObservationList observations = c.element().getKV().getValue();
+            /*try {
                 Observation observation = g.fromJson(new String(record.getKV().getValue()), new TypeToken<Observation>() {
                 }.getType());
                 observations.add(observation);
@@ -108,9 +109,9 @@ public final class FullPipelineBuilder {
                 LOG.debug("Parsing single observation failed. Now trying to parse List<Observation>: " + e);
                 observations = g.fromJson(new String(record.getKV().getValue()), new TypeToken<List<Observation>>() {
                 }.getType());
-            }
+            }*/
 
-            observations.forEach((obs) -> {
+            observations.getObservationList().forEach((obs) -> {
                 Instant timestamp = new Instant().withMillis(obs.getOn());
                 Instant now = Instant.now();
                 c.output(KV.of(obs.getCid(), obs));

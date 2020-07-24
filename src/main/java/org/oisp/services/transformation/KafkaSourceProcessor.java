@@ -17,6 +17,9 @@
 
 package org.oisp.services.transformation;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.io.kafka.TimestampPolicy;
 import org.apache.beam.sdk.io.kafka.TimestampPolicyFactory;
@@ -24,21 +27,23 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.joda.time.Instant;
+import org.oisp.services.collection.Observation;
+import org.oisp.services.collection.ObservationList;
 import org.oisp.services.conf.Config;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 public class KafkaSourceProcessor implements Serializable{
 
-    private KafkaIO.Read<String, byte[]> transform = null;
+    private KafkaIO.Read<String, ObservationList> transform = null;
 
-    public KafkaIO.Read<String, byte[]> getTransform() {
+    public KafkaIO.Read<String, ObservationList> getTransform() {
         return transform;
     }
 
@@ -51,11 +56,11 @@ public class KafkaSourceProcessor implements Serializable{
         consumerProperties.put("enable.auto.commit", "true");
         consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
-        transform = KafkaIO.<String, byte[]>read()
+        transform = KafkaIO.<String, ObservationList>read()
                 .withBootstrapServers(serverUri)
                 .withTopic(topic)
                 .withKeyDeserializer(StringDeserializer.class)
-                .withValueDeserializer(ByteArrayDeserializer.class)
+                .withValueDeserializer(ObservationDeserializer.class)
                 .withConsumerConfigUpdates(consumerProperties)
                 .withTimestampPolicyFactory(new CustomTimestampPolicyFactory())
                 .withReadCommitted()
@@ -63,8 +68,9 @@ public class KafkaSourceProcessor implements Serializable{
 
     }
 
-    class CustomTimestampPolicy extends TimestampPolicy<String, byte[]> implements Serializable {
-        public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, byte[]> record) {
+
+    public class CustomTimestampPolicy extends TimestampPolicy<String, ObservationList> implements Serializable {
+        public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, ObservationList> record) {
             return new Instant(0);
         }
         public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
@@ -72,10 +78,10 @@ public class KafkaSourceProcessor implements Serializable{
         }
     }
 
-    class CustomTimestampPolicyFactory implements TimestampPolicyFactory<String, byte[]>, Serializable{
+    public class CustomTimestampPolicyFactory implements TimestampPolicyFactory<String, ObservationList>, Serializable{
         public TimestampPolicy createTimestampPolicy(TopicPartition tp, Optional<Instant> previousWatermark) {
             return new CustomTimestampPolicy();
         }
     }
-    
+
 }
