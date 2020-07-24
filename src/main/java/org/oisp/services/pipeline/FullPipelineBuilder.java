@@ -96,7 +96,7 @@ public final class FullPipelineBuilder {
     // Distribute elements with cid key
     static class KafkaToObservationFn extends DoFn<KafkaRecord<String, byte[]>, KV<String, Observation>> {
         @ProcessElement
-        public void processElement(ProcessContext c) {
+        public void processElement(ProcessContext c, @Timestamp Instant inputTimestamp) {
             KafkaRecord<String, byte[]> record = c.element();
             Gson g = new Gson();
             List<Observation> observations = new ArrayList<Observation>();

@@ -17,17 +17,24 @@
 
 package org.oisp.services.transformation;
 
+import org.apache.beam.sdk.io.kafka.KafkaRecord;
+import org.apache.beam.sdk.io.kafka.TimestampPolicy;
+import org.apache.beam.sdk.io.kafka.TimestampPolicyFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.joda.time.Instant;
 import org.oisp.services.conf.Config;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 
-public class KafkaSourceProcessor {
+public class KafkaSourceProcessor implements Serializable{
 
     private KafkaIO.Read<String, byte[]> transform = null;
 
@@ -36,7 +43,6 @@ public class KafkaSourceProcessor {
     }
 
     public KafkaSourceProcessor(Map<String, Object> userConfig, String topic) {
-
 
         String serverUri = userConfig.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
 
@@ -51,8 +57,25 @@ public class KafkaSourceProcessor {
                 .withKeyDeserializer(StringDeserializer.class)
                 .withValueDeserializer(ByteArrayDeserializer.class)
                 .withConsumerConfigUpdates(consumerProperties)
+                .withTimestampPolicyFactory(new CustomTimestampPolicyFactory())
                 .withReadCommitted()
                 .commitOffsetsInFinalize();
 
     }
+
+    class CustomTimestampPolicy extends TimestampPolicy<String, byte[]> implements Serializable {
+        public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, byte[]> record) {
+            return new Instant(0);
+        }
+        public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
+            return new Instant(0);
+        }
+    }
+
+    class CustomTimestampPolicyFactory implements TimestampPolicyFactory<String, byte[]>, Serializable{
+        public TimestampPolicy createTimestampPolicy(TopicPartition tp, Optional<Instant> previousWatermark) {
+            return new CustomTimestampPolicy();
+        }
+    }
+    
 }
