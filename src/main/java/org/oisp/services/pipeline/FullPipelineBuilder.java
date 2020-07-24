@@ -89,7 +89,16 @@ public final class FullPipelineBuilder {
             Iterable<Observation> observations = c.element().getValue();
             Iterator<Observation> it = observations.iterator();
             Integer elements = Iterators.size(it);
-            System.out.println("key " + key + " size " + elements);
+            System.out.print("key " + key + " size " + elements + "=> ");
+            for(Iterator<Observation> iter = observations.iterator(); iter.hasNext(); ) {
+                Observation obs = iter.next();
+                if (obs.getValue().length() < 100) {
+                    System.out.print(obs.getValue() + ",");
+                } else {
+                    System.out.print("*removed*");
+                }
+            }
+            System.out.println("<= end");
             c.output(Long.valueOf(elements));
         }
     }

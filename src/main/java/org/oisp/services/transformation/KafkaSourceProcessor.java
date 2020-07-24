@@ -70,11 +70,20 @@ public class KafkaSourceProcessor implements Serializable{
 
 
     public class CustomTimestampPolicy extends TimestampPolicy<String, ObservationList> implements Serializable {
+        Instant watermark = new Instant(0);
+
         public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, ObservationList> record) {
-            return new Instant(0);
+            List<Observation> obsList = record.getKV().getValue().getObservationList();
+            Long minTimestamp = obsList.stream().map((obs) -> obs.getOn()).reduce(Long.MAX_VALUE, (minimum, element) -> minimum > element ? element : minimum);
+
+            if (minTimestamp > watermark.getMillis()) {
+                watermark = new Instant().withMillis(minTimestamp);
+            }
+            return watermark;
+
         }
         public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
-            return new Instant(0);
+            return watermark;
         }
     }
 
