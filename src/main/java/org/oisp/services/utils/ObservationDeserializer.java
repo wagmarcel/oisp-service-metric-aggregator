@@ -1,11 +1,11 @@
-package org.oisp.services.transformation;
+package org.oisp.services.utils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.oisp.services.collection.Observation;
-import org.oisp.services.collection.ObservationList;
+import org.oisp.services.collections.Observation;
+import org.oisp.services.collections.ObservationList;
 
 import java.util.ArrayList;
 import java.util.List;

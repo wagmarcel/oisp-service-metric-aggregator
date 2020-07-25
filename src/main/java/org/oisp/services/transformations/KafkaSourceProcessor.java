@@ -15,25 +15,20 @@
  *
  */
 
-package org.oisp.services.transformation;
+package org.oisp.services.transformations;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.io.kafka.TimestampPolicy;
 import org.apache.beam.sdk.io.kafka.TimestampPolicyFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.joda.time.Instant;
-import org.oisp.services.collection.Observation;
-import org.oisp.services.collection.ObservationList;
+import org.oisp.services.collections.Observation;
+import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
+import org.oisp.services.utils.ObservationDeserializer;
 
 import java.io.Serializable;
 import java.util.*;

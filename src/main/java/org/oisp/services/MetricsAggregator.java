@@ -5,7 +5,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.oisp.services.conf.CmdlineOptions;
 import org.oisp.services.conf.Config;
-import org.oisp.services.pipeline.FullPipelineBuilder;
+import org.oisp.services.pipelines.FullPipelineBuilder;
 
 import java.util.HashMap;
 

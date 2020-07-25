@@ -1,19 +1,18 @@
-package org.oisp.services.pipeline;
+package org.oisp.services.pipelines;
 
 
 import com.google.common.collect.Iterators;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
+
+import org.apache.beam.sdk.coders.KvCoder;
+import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.FixedWindows;
-import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -21,21 +20,23 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import org.joda.time.Duration;
 import org.apache.beam.sdk.Pipeline;
-import org.joda.time.LocalDateTime;
-import org.oisp.services.collection.Observation;
-import org.oisp.services.collection.ObservationList;
+import org.oisp.services.collections.AggregatedObservation;
+import org.oisp.services.collections.Observation;
+import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
-import org.oisp.services.transformation.KafkaSourceObservationsProcessor;
+import org.oisp.services.transformations.AggregateAvg;
+import org.oisp.services.transformations.KafkaSourceObservationsProcessor;
 import org.oisp.services.utils.LogHelper;
 import org.oisp.services.windows.FullTimeInterval;
 import org.slf4j.Logger;
 
 import org.joda.time.Instant;
-import java.util.ArrayList;
+
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+
+import static org.apache.beam.sdk.Pipeline.create;
 
 
 public final class FullPipelineBuilder {
@@ -45,7 +46,7 @@ public final class FullPipelineBuilder {
     }
 
     public static Pipeline build(PipelineOptions options, Map<String, Object> conf) {
-        Pipeline p = Pipeline.create(options);
+        Pipeline p = create(options);
 
 
 
@@ -53,15 +54,27 @@ public final class FullPipelineBuilder {
         //Map observations to rules
         //Process rules for Basic, Timebased and Statistics
         KafkaSourceObservationsProcessor observationsKafka = new KafkaSourceObservationsProcessor(conf);
+
         PCollection<KV<String, Observation>> obs = p.apply(observationsKafka.getTransform())
                 .apply(ParDo.of(new KafkaToObservationFn()))
-                        .apply(Window.configure().<KV<String, Observation>>into(
-                        FullTimeInterval.withUnit(Aggregator.AggregatorUnit.minutes))
-                                //FixedWindows.of(Duration.standardSeconds(10)))
-                );
+                .apply(Window.configure().<KV<String, Observation>>into(
+                        FullTimeInterval.withAggregator(
+                                new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.minutes))
+                ));
+
         PCollection<KV<String, Iterable<Observation>>> gbk = obs.apply(GroupByKey.<String, Observation>create());
         PCollection<Long> sizes = gbk.apply(ParDo.of(new PrintGBKFn()));
 
+        /*PCollection<KV<String, Iterable<Observation>>>  group = obs
+                .apply(GroupByKey.<String, Observation>create());
+        PCollection<Long> sizes = group.apply(ParDo.of(new PrintGBKFn()));*/
+
+        PCollection<AggregatedObservation> aggr = gbk
+                .apply(ParDo.of(
+                        new AggregateAvg(
+                                new Aggregator(Aggregator.AggregatorType.AVG, Aggregator.AggregatorUnit.minutes))));
+        PCollection<Long> aggrValues = aggr.apply(ParDo.of(new PrintAggregationResultFn()));
+        //aggr.setCoder(SerializableCoder.of(KV<String.class, Observation.class>));
 
         //Heartbeat Pipeline
         //Send regular Heartbeat to Kafka topic
@@ -74,12 +87,21 @@ public final class FullPipelineBuilder {
                         .withTopic("heartbeat")
                         .withKeySerializer(StringSerializer.class)
                         .withValueSerializer(StringSerializer.class));
-
-
-
         return p;
     }
 
+    static class PrintAggregationResultFn extends DoFn<AggregatedObservation, Long> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            if (c.element() != null) {
+                Aggregator aggr = c.element().getAggregator();
+                Observation obs = c.element().getObservation();
+                System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue() + ", key " + obs.getCid());
+                c.output(Long.valueOf(0));
+            }
+        }
+
+    }
 
     // Print out gbk results
     static class PrintGBKFn extends DoFn<KV<String, Iterable<Observation>>, Long> {
@@ -92,8 +114,8 @@ public final class FullPipelineBuilder {
             System.out.print("key " + key + " size " + elements + "=> ");
             for(Iterator<Observation> iter = observations.iterator(); iter.hasNext(); ) {
                 Observation obs = iter.next();
-                if (obs.getValue().length() < 100) {
-                    System.out.print(obs.getValue() + ",");
+                if (!obs.isByteArray()) {
+                    System.out.print(obs.getValue() + ", " + Instant.ofEpochMilli(obs.getOn()) + ";");
                 } else {
                     System.out.print("*removed*");
                 }

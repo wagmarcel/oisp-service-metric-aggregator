@@ -5,7 +5,7 @@ import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
 import org.apache.beam.sdk.transforms.windowing.WindowFn;
 import org.apache.beam.sdk.transforms.windowing.WindowMappingFn;
 import org.apache.beam.sdk.values.KV;
-import org.oisp.services.collection.Observation;
+import org.oisp.services.collections.Observation;
 import org.oisp.services.dataStructures.Aggregator;
 
 //import java.time.Duration;
@@ -18,14 +18,14 @@ import java.util.Collection;
 import java.util.GregorianCalendar;
 
 public class FullTimeInterval extends WindowFn<KV<String, Observation>, IntervalWindow> {
-    private final Aggregator.AggregatorUnit unit;
+    private final Aggregator aggregator;
 
-    private FullTimeInterval(Aggregator.AggregatorUnit units) {
-        this.unit = units;
+    private FullTimeInterval(Aggregator aggregator) {
+        this.aggregator = aggregator;
     }
 
-    public static FullTimeInterval withUnit(Aggregator.AggregatorUnit unit) {
-        return new FullTimeInterval(unit);
+    public static FullTimeInterval withAggregator(Aggregator aggregator) {
+        return new FullTimeInterval(aggregator);
     }
 
     @Override
@@ -39,7 +39,7 @@ public class FullTimeInterval extends WindowFn<KV<String, Observation>, Interval
         gc.set(Calendar.MILLISECOND, 0);
         Duration windowDuration;
         Instant startTimeOfWindow;
-        switch(unit){
+        switch(aggregator.getUnit()){
             case hours:
                 windowDuration = Duration.standardHours (1);
                 gc.set(Calendar.MINUTE, 0);

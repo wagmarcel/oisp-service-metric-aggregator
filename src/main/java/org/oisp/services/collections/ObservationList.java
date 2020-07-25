@@ -1,4 +1,4 @@
-package org.oisp.services.collection;
+package org.oisp.services.collections;
 
 import java.io.Serializable;
 import java.util.ArrayList;

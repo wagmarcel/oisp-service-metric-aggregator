@@ -15,7 +15,7 @@
  *
  */
 
-package org.oisp.services.collection;
+package org.oisp.services.collections;
 
 import com.google.common.base.Objects;
 
@@ -34,6 +34,23 @@ public class Observation implements Serializable {
     private String value;
     private List<Double> loc;
     private Map<String, String> attributes;
+    private String dataType;
+
+    public  boolean isNumber(){
+        return this.dataType.equals("Number");
+    }
+
+    public  boolean isByteArray(){
+        return this.dataType.equals("ByteArray");
+    }
+
+    public String getDataType() {
+        return dataType;
+    }
+
+    public void setDataType(String dataType) {
+        this.dataType = dataType;
+    }
 
     public String getAid() {
         return aid;
@@ -91,6 +108,16 @@ public class Observation implements Serializable {
         this.systemOn = systemOn;
     }
 
+    public Observation(Observation o) {
+        this.aid = o.getAid();
+        this.attributes = o.getAttributes();
+        this.cid = o.getCid();
+        this.loc = o.getLoc();
+        this.dataType = o.getDataType();
+        this.on = o.getOn();
+        this.systemOn = o.getSystemOn();
+        this.value = o.getValue();
+    }
     @Override
     public boolean equals(Object o) {
         if (this == o) {
