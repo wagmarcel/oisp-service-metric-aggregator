@@ -39,6 +39,18 @@ public class Observation implements Serializable {
     public  boolean isNumber(){
         return this.dataType.equals("Number");
     }
+    public void setDataTypeString() {
+        this.dataType = "String";
+    }
+    public void setDataTypeNumber() {
+        this.dataType = "Number";
+    }
+    public void setDataTypeByteArray() {
+        this.dataType = "ByteArray";
+    }
+    public void setDataTypeBoolean() {
+        this.dataType = "Boolean";
+    }
 
     public  boolean isByteArray(){
         return this.dataType.equals("ByteArray");

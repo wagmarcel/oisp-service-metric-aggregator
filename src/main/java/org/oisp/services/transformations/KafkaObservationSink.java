@@ -48,7 +48,7 @@ public class KafkaObservationSink implements Serializable{
         return transform;
     }
 
-    public KafkaObservationSink(Map<String, String> userConfig, String topic) {
+    public KafkaObservationSink(Map<String, Object> userConfig, String topic) {
 
         String serverUri = userConfig.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
 
