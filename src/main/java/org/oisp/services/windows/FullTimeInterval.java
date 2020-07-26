@@ -33,12 +33,10 @@ public class FullTimeInterval extends WindowFn<KV<String, Observation>, Interval
 
         KV<String, Observation> obs = c.element();
         Instant timeStampOfCurrentSample = c.timestamp();
-        GregorianCalendar gc = new GregorianCalendar();
+        /*GregorianCalendar gc = new GregorianCalendar();
         gc.setTime(timeStampOfCurrentSample.toDate());
         gc.set(Calendar.SECOND, 0);
         gc.set(Calendar.MILLISECOND, 0);
-        Duration windowDuration;
-        Instant startTimeOfWindow;
         switch(aggregator.getUnit()){
             case hours:
                 windowDuration = Duration.standardHours (1);
@@ -48,8 +46,11 @@ public class FullTimeInterval extends WindowFn<KV<String, Observation>, Interval
             default:
                 windowDuration = Duration.standardMinutes(1);
                 break;
-        }
-        startTimeOfWindow = new Instant(gc.getTimeInMillis());
+        }*/
+        Instant startTimeOfWindow;
+        startTimeOfWindow = aggregator.getWindowStartTime(timeStampOfCurrentSample);
+        Duration windowDuration;
+        windowDuration = aggregator.getWindowDuration();
         return Arrays.asList(new IntervalWindow(startTimeOfWindow, windowDuration));
     }
 

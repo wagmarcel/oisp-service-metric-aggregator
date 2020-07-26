@@ -96,7 +96,9 @@ public final class FullPipelineBuilder {
             if (c.element() != null) {
                 Aggregator aggr = c.element().getAggregator();
                 Observation obs = c.element().getObservation();
-                System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue() + ", key " + obs.getCid());
+                System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue() +
+                        ", key " + obs.getCid() + ", window(" +
+                        aggr.getWindowDuration());
                 c.output(Long.valueOf(0));
             }
         }
