@@ -42,9 +42,9 @@ import java.util.Optional;
 
 public class KafkaObservationSink implements Serializable{
 
-    private KafkaIO.Write<String, ObservationList> transform = null;
+    private KafkaIO.Write<String, Observation> transform = null;
 
-    public KafkaIO.Write<String, ObservationList> getTransform() {
+    public KafkaIO.Write<String, Observation> getTransform() {
         return transform;
     }
 
@@ -57,7 +57,7 @@ public class KafkaObservationSink implements Serializable{
         consumerProperties.put("enable.auto.commit", "true");
         consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");*/
 
-        transform = KafkaIO.<String, ObservationList>write()
+        transform = KafkaIO.<String, Observation>write()
                 .withBootstrapServers(serverUri)
                 .withTopic(topic)
                 .withKeySerializer(StringSerializer.class)

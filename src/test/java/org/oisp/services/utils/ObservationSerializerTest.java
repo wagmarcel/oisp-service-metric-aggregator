@@ -29,19 +29,14 @@ class ObservationSerializerTest {
         observation.setSystemOn(1000000800000l);
         observation.setAttributes(attributes);
         observation.setLoc(Arrays.asList(100.1, 200.2));
-        List<Observation> listObservation = Arrays.asList(observation);
-        ObservationList observationList = new ObservationList();
-        observationList.setObservationList(listObservation);
 
-        byte[] serialized = new ObservationSerializer().serialize("topic", observationList);
+        byte[] serialized = new ObservationSerializer().serialize("topic", observation);
 
         Gson g = new Gson();
-        List<Observation> observationList2 = new ArrayList<>();
 
-        observationList2 = g.fromJson(new String(serialized), new TypeToken<List<Observation>>() {
+        Observation deserializedObservation = g.fromJson(new String(serialized), new TypeToken<Observation>() {
         }.getType());
 
-        Observation deserializedObservation = observationList2.get(0);
         assertEquals(observation.getValue(), deserializedObservation.getValue());
         assertEquals(observation.getCid(), deserializedObservation.getCid());
         assertEquals(observation.getAid(), deserializedObservation.getAid());

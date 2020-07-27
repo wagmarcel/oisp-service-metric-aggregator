@@ -33,8 +33,6 @@ public class AggregateAvg extends DoFn<KV<String, Iterable<Observation>>, Aggreg
             Double avg = accum / sum;
             newObs.setValue(avg.toString());
             c.output(new AggregatedObservation(newObs, aggregator));
-        } else {
-            c.output(null);
         }
     }
 }

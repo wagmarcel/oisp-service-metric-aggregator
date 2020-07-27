@@ -11,7 +11,7 @@ import org.oisp.services.collections.ObservationList;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ObservationSerializer implements Serializer<ObservationList> {
+public class ObservationSerializer implements Serializer<Observation> {
 
     public ObservationSerializer(){}
     public void configure(java.util.Map<String,?> configs,
@@ -21,10 +21,10 @@ public class ObservationSerializer implements Serializer<ObservationList> {
     public void close(){
     }
 
-    public byte[] serialize(String topic, ObservationList observationList) {
+    public byte[] serialize(String topic, Observation observation) {
         Gson g = new Gson();
         String output;
-        output = g.toJson(observationList.getObservationList());
+        output = g.toJson(observation);
         return output.getBytes();
     }
 }
