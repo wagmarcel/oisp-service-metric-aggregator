@@ -3,13 +3,10 @@ package org.oisp.services.pipelines;
 
 import com.google.common.collect.Iterators;
 
-import org.apache.beam.sdk.coders.KvCoder;
-import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -25,8 +22,7 @@ import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
-import org.oisp.services.transformations.AggregateAvg;
-import org.oisp.services.transformations.KafkaSourceObservationsProcessor;
+import org.oisp.services.transformations.*;
 import org.oisp.services.utils.LogHelper;
 import org.oisp.services.windows.FullTimeInterval;
 import org.slf4j.Logger;
@@ -53,10 +49,11 @@ public final class FullPipelineBuilder {
         //Observation Pipeline
         //Map observations to rules
         //Process rules for Basic, Timebased and Statistics
-        KafkaSourceObservationsProcessor observationsKafka = new KafkaSourceObservationsProcessor(conf);
+        KafkaObservationsSourceProcessor observationsKafka = new KafkaObservationsSourceProcessor(conf);
+        KafkaObservationSink kafkaSink = new KafkaObservationsSinkProcessor(conf);
 
         PCollection<KV<String, Observation>> obs = p.apply(observationsKafka.getTransform())
-                .apply(ParDo.of(new KafkaToObservationFn()))
+                .apply(ParDo.of(new KafkaToFilteredObservationFn(conf)))
                 .apply(Window.configure().<KV<String, Observation>>into(
                         FullTimeInterval.withAggregator(
                                 new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.minutes))
@@ -74,6 +71,9 @@ public final class FullPipelineBuilder {
                         new AggregateAvg(
                                 new Aggregator(Aggregator.AggregatorType.AVG, Aggregator.AggregatorUnit.minutes))));
         PCollection<Long> aggrValues = aggr.apply(ParDo.of(new PrintAggregationResultFn()));
+        PCollection<KV<String, Observation>> sendobs = aggr.apply(ParDo.of(new SendObservation(conf)));
+        sendobs.apply(kafkaSink.getTransform());
+
         //aggr.setCoder(SerializableCoder.of(KV<String.class, Observation.class>));
 
         //Heartbeat Pipeline
@@ -128,7 +128,12 @@ public final class FullPipelineBuilder {
     }
 
     // Distribute elements with cid key
-    static class KafkaToObservationFn extends DoFn<KafkaRecord<String, ObservationList>, KV<String, Observation>> {
+    // Filter out already aggregated values
+    static class KafkaToFilteredObservationFn extends DoFn<KafkaRecord<String, ObservationList>, KV<String, Observation>> {
+        String serviceName;
+        KafkaToFilteredObservationFn(Map<String, Object> conf) {
+            serviceName = (String) conf.get(Config.SERVICE_NAME);
+        }
         @ProcessElement
         public void processElement(ProcessContext c, @Timestamp Instant inputTimestamp) {
             /*KafkaRecord<String, byte[]> record = c.element();
@@ -145,9 +150,11 @@ public final class FullPipelineBuilder {
             }*/
 
             observations.getObservationList().forEach((obs) -> {
-                Instant timestamp = new Instant().withMillis(obs.getOn());
-                Instant now = Instant.now();
-                c.output(KV.of(obs.getCid(), obs));
+                if (! obs.getCid().contains(serviceName)) {
+                    Instant timestamp = new Instant().withMillis(obs.getOn());
+                    Instant now = Instant.now();
+                    c.output(KV.of(obs.getCid(), obs));
+                }
             });
         }
     }

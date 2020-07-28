@@ -30,11 +30,13 @@ public abstract class MetricsAggregator {
         //read json config from ENVIRONMENT - needed because stupid mvn cannot read JSON from cmdline. Unbelievable, but true.
         String metricsTopic = ((CmdlineOptions) options).getMetricsTopic();
         String bootstrapServers = ((CmdlineOptions) options).getBootstrapServers();
+        String serviceName = ((CmdlineOptions) options).getServiceName();
 
         HashMap<String, Object> config = new HashMap<>();
 
         config.put(Config.KAFKA_METRICS_TOPIC, metricsTopic);
         config.put(Config.KAFKA_BOOTSTRAP_SERVERS, bootstrapServers);
+        config.put(Config.SERVICE_NAME, serviceName);
 
 
         fullPipeline = FullPipelineBuilder.build(options, config);

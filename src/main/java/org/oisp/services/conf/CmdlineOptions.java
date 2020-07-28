@@ -14,4 +14,9 @@ public interface CmdlineOptions extends PipelineOptions {
     @Default.String("")
     String getBootstrapServers();
     void setBootstrapServers(String value);
+
+    @Description("Service Name")
+    @Default.String("aggregator")
+    String getServiceName();
+    void setServiceName(String value);
 }
