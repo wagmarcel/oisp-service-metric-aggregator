@@ -29,7 +29,9 @@ import org.joda.time.Instant;
 import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
+import org.oisp.services.utils.LogHelper;
 import org.oisp.services.utils.ObservationDeserializer;
+import org.slf4j.Logger;
 
 import java.io.Serializable;
 import java.util.*;
@@ -66,6 +68,8 @@ public class KafkaObservationSource implements Serializable{
 
 
     public class CustomTimestampPolicy extends TimestampPolicy<String, ObservationList> implements Serializable {
+        Logger LOG = LogHelper.getLogger(KafkaObservationSource.class);
+
         Instant watermark = new Instant(0);
         Instant lastTime = Instant.now();
 
@@ -74,21 +78,23 @@ public class KafkaObservationSource implements Serializable{
             Long minTimestamp = obsList.stream().map((obs) -> obs.getOn()).reduce(Long.MAX_VALUE, (minimum, element) -> minimum > element ? element : minimum);
             String cid = record.getKV().getKey();
 
-            if (minTimestamp > watermark.getMillis()) {
+            if (minTimestamp > watermark.getMillis() && minTimestamp <= Instant.now().getMillis()) {
                 watermark = new Instant().withMillis(minTimestamp);
+                LOG.debug("New watermark: {}, key {}", watermark, obsList.get(0).getCid());
             }
-            return watermark;
+            return Instant.ofEpochMilli(minTimestamp);
+            //return watermark;
 
         }
         public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
-            Duration advanceTimestamp = Duration.millis(Instant.now().getMillis() - lastTime.getMillis());
+            /*Duration advanceTimestamp = Duration.millis(Instant.now().getMillis() - lastTime.getMillis());
             Instant newWatermark = watermark.plus(advanceTimestamp);
             if (newWatermark.getMillis() > Instant.now().getMillis()) {
                 newWatermark = Instant.now();
             }
-            System.out.println("Watermark " + newWatermark);
+            System.out.println("Watermark " + newWatermark);*/
 
-            return newWatermark;
+            return watermark;
         }
     }
 

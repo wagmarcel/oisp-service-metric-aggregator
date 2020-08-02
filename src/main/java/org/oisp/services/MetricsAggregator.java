@@ -8,6 +8,7 @@ import org.apache.log4j.Level;
 import org.oisp.services.conf.CmdlineOptions;
 import org.oisp.services.conf.Config;
 import org.oisp.services.pipelines.FullPipelineBuilder;
+import org.oisp.services.utils.LogHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,7 @@ import java.util.HashMap;
 
 
 public abstract class MetricsAggregator {
-    private static final Logger LOG = LoggerFactory.getLogger(MetricsAggregator.class);
+    private static final Logger LOG = LogHelper.getLogger(MetricsAggregator.class);
     public static void main(String[] args) {
 
 

@@ -10,12 +10,16 @@
     </layout>
   </appender>
 
-  <logger name="org.apache.beam.sdk.util.WindowTracing" additivity="false">
+ <!--<logger name="org.apache.beam.sdk.util.WindowTracing" additivity="false">
     <level value="debug"/>
     <appender-ref ref="console"/>
   </logger>
+    <logger name="org.oisp.services.transforms" additivity="false">
+        <level value="debug"/>
+        <appender-ref ref="console"/>
+    </logger>-->
   <root>
-    <level value="INFO"/>
+    <level value="error"/>
     <appender-ref ref="console"/>
   </root>
 
