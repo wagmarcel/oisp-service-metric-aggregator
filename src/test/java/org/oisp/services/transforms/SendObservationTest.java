@@ -1,4 +1,4 @@
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;

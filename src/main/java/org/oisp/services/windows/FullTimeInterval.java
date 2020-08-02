@@ -1,10 +1,9 @@
 package org.oisp.services.windows;
 
 import org.apache.beam.sdk.coders.Coder;
-import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
-import org.apache.beam.sdk.transforms.windowing.WindowFn;
-import org.apache.beam.sdk.transforms.windowing.WindowMappingFn;
+import org.apache.beam.sdk.transforms.windowing.*;
 import org.apache.beam.sdk.values.KV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.oisp.services.collections.Observation;
 import org.oisp.services.dataStructures.Aggregator;
 
@@ -13,11 +12,9 @@ import org.joda.time.Instant;
 import org.joda.time.Duration;
 
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.GregorianCalendar;
 
-public class FullTimeInterval extends WindowFn<KV<String, Observation>, IntervalWindow> {
+public class FullTimeInterval extends PartitioningWindowFn<KV<String, Observation>, IntervalWindow> {
     private final Aggregator aggregator;
 
     private FullTimeInterval(Aggregator aggregator) {
@@ -29,37 +26,29 @@ public class FullTimeInterval extends WindowFn<KV<String, Observation>, Interval
     }
 
     @Override
-    public Collection<IntervalWindow> assignWindows(AssignContext c) {
+    public IntervalWindow assignWindow(Instant timestamp) {
+
+        //KV<String, Observation> obs = c.element();
+        //Instant timeStampOfCurrentSample = c.timestamp();
+        Instant startTimeOfWindow;
+        startTimeOfWindow = aggregator.getWindowStartTime(timestamp);
+        Duration windowDuration;
+        windowDuration = aggregator.getWindowDuration();
+        IntervalWindow window = new IntervalWindow(startTimeOfWindow, windowDuration);
+        return window;
+    }
+
+    /*@Override
+    public Collection<IntervalWindow> assignWindows(WindowFn.AssignContext c)) {
 
         KV<String, Observation> obs = c.element();
         Instant timeStampOfCurrentSample = c.timestamp();
-        /*GregorianCalendar gc = new GregorianCalendar();
-        gc.setTime(timeStampOfCurrentSample.toDate());
-        gc.set(Calendar.SECOND, 0);
-        gc.set(Calendar.MILLISECOND, 0);
-        switch(aggregator.getUnit()){
-            case hours:
-                windowDuration = Duration.standardHours (1);
-                gc.set(Calendar.MINUTE, 0);
-                break;
-            case minutes:
-            default:
-                windowDuration = Duration.standardMinutes(1);
-                break;
-        }*/
         Instant startTimeOfWindow;
         startTimeOfWindow = aggregator.getWindowStartTime(timeStampOfCurrentSample);
         Duration windowDuration;
         windowDuration = aggregator.getWindowDuration();
         return Arrays.asList(new IntervalWindow(startTimeOfWindow, windowDuration));
-    }
-
-    @Override
-    public void mergeWindows(MergeContext c) {
-        //System.out.printf("Marcel234 mergeWindows");
-
-        // Overlap should not happen
-    }
+    }*/
 
     @Override
     public boolean isCompatible(WindowFn<?,?> other) {
@@ -69,10 +58,5 @@ public class FullTimeInterval extends WindowFn<KV<String, Observation>, Interval
     @Override
     public Coder<IntervalWindow> windowCoder() {
         return IntervalWindow.getCoder();
-    }
-
-    @Override
-    public WindowMappingFn<IntervalWindow> getDefaultWindowMappingFn() {
-        return null;
     }
 }

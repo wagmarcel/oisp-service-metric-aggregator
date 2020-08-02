@@ -15,29 +15,17 @@
  *
  */
 
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
 import org.apache.beam.sdk.io.kafka.KafkaIO;
-import org.apache.beam.sdk.io.kafka.KafkaRecord;
-import org.apache.beam.sdk.io.kafka.TimestampPolicy;
-import org.apache.beam.sdk.io.kafka.TimestampPolicyFactory;
-import org.apache.beam.vendor.grpc.v1p21p0.com.google.gson.JsonSerializer;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.joda.time.Instant;
 import org.oisp.services.collections.Observation;
-import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
-import org.oisp.services.utils.ObservationDeserializer;
 import org.oisp.services.utils.ObservationSerializer;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 
 public class KafkaObservationSink implements Serializable{

@@ -15,23 +15,15 @@
  *
  */
 
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
+import org.oisp.services.conf.Config;
 
-public class InvalidMessageTypeException extends Exception {
-    public InvalidMessageTypeException() {
-        super();
-    }
+import java.util.Map;
 
-    public InvalidMessageTypeException(String message) {
-        super(message);
-    }
+public class KafkaObservationsSourceProcessor extends KafkaObservationSource {
 
-    public InvalidMessageTypeException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public InvalidMessageTypeException(Throwable cause) {
-        super(cause);
+    public KafkaObservationsSourceProcessor(Map<String, Object> userConfig) {
+       super(userConfig, userConfig.get(Config.KAFKA_METRICS_TOPIC).toString());
     }
 }

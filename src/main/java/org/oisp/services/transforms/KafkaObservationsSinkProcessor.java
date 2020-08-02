@@ -15,7 +15,7 @@
  *
  */
 
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
 import org.oisp.services.conf.Config;
 

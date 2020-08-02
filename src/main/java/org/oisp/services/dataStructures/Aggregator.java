@@ -10,6 +10,7 @@ import java.util.GregorianCalendar;
 public class Aggregator implements Serializable {
     public enum AggregatorType{
         NONE,
+        ALL,
         AVG,
         SUM,
         COUNT,

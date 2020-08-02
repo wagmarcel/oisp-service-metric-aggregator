@@ -1,10 +1,9 @@
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.oisp.services.collections.AggregatedObservation;
 import org.oisp.services.collections.Observation;
-import org.oisp.services.conf.CmdlineOptions;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
 import java.util.Map;

@@ -27,7 +27,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <beam.version>2.16.0</beam.version>
+    <beam.version>2.22.0</beam.version>
 
     <bigquery.version>v2-rev374-1.22.0</bigquery.version>
     <google-clients.version>1.22.0</google-clients.version>
@@ -288,7 +288,7 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.beam</groupId>
-          <artifactId>beam-runners-flink-1.7</artifactId>
+          <artifactId>beam-runners-flink-1.6</artifactId>
           <version>${beam.version}</version>
           <scope>runtime</scope>
         </dependency>
@@ -526,7 +526,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
-      <artifactId>beam-runners-flink-1.7</artifactId>
+      <artifactId>beam-runners-flink-1.6</artifactId>
       <version>${beam.version}</version>
       <scope>runtime</scope>
     </dependency>

@@ -15,7 +15,7 @@
  *
  */
 
-package org.oisp.services.transformations;
+package org.oisp.services.transforms;
 
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.io.kafka.TimestampPolicy;
@@ -24,6 +24,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
@@ -66,10 +67,12 @@ public class KafkaObservationSource implements Serializable{
 
     public class CustomTimestampPolicy extends TimestampPolicy<String, ObservationList> implements Serializable {
         Instant watermark = new Instant(0);
+        Instant lastTime = Instant.now();
 
         public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, ObservationList> record) {
             List<Observation> obsList = record.getKV().getValue().getObservationList();
             Long minTimestamp = obsList.stream().map((obs) -> obs.getOn()).reduce(Long.MAX_VALUE, (minimum, element) -> minimum > element ? element : minimum);
+            String cid = record.getKV().getKey();
 
             if (minTimestamp > watermark.getMillis()) {
                 watermark = new Instant().withMillis(minTimestamp);
@@ -78,7 +81,14 @@ public class KafkaObservationSource implements Serializable{
 
         }
         public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
-            return watermark;
+            Duration advanceTimestamp = Duration.millis(Instant.now().getMillis() - lastTime.getMillis());
+            Instant newWatermark = watermark.plus(advanceTimestamp);
+            if (newWatermark.getMillis() > Instant.now().getMillis()) {
+                newWatermark = Instant.now();
+            }
+            System.out.println("Watermark " + newWatermark);
+
+            return newWatermark;
         }
     }
 

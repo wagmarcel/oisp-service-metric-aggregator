@@ -22,7 +22,7 @@ import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
-import org.oisp.services.transformations.*;
+import org.oisp.services.transforms.*;
 import org.oisp.services.utils.LogHelper;
 import org.oisp.services.windows.FullTimeInterval;
 import org.slf4j.Logger;
@@ -47,34 +47,60 @@ public final class FullPipelineBuilder {
 
 
         //Observation Pipeline
-        //Map observations to rules
+        //Map observations to aggregated values
+        // ----------------    ----------------------    ---------------------     ------------------------
+        // | Kafka Source | => | Filter Observation | => | AggregationWindow | =>  | Group windows by keys | =>
+        //  ---------------    ----------------------    ---------------------     ------------------------
+        //
+        // -------------    -----------------------------------    --------------
+        // | Aggegator | => | Prepare Observation for sending | => | Kafka Sink |
+        // -------------    -----------------------------------    --------------
         //Process rules for Basic, Timebased and Statistics
         KafkaObservationsSourceProcessor observationsKafka = new KafkaObservationsSourceProcessor(conf);
         KafkaObservationSink kafkaSink = new KafkaObservationsSinkProcessor(conf);
 
-        PCollection<KV<String, Observation>> obs = p.apply(observationsKafka.getTransform())
-                .apply(ParDo.of(new KafkaToFilteredObservationFn(conf)))
-                .apply(Window.configure().<KV<String, Observation>>into(
-                        FullTimeInterval.withAggregator(
-                                new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.minutes))
-                ));
+        PCollection<KV<String, Observation>> observations = p.apply("Kafka Source", observationsKafka.getTransform())
+                .apply("Filter Observation", ParDo.of(new KafkaToFilteredObservationFn(conf)));
 
-        PCollection<KV<String, Iterable<Observation>>> gbk = obs.apply(GroupByKey.<String, Observation>create());
-        PCollection<Long> sizes = gbk.apply(ParDo.of(new PrintGBKFn()));
+        // window for minutes
+        PCollection<KV<String, Observation>> observationsPerMinute = observations
+                .apply("Aggregation Window for minutes", Window.configure().<KV<String, Observation>>into(
+                FullTimeInterval.withAggregator(
+                        new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.minutes))
+        ));
+        PCollection<KV<String, Iterable<Observation>>> groupedObservationsPerMinute = observationsPerMinute
+                .apply("Group windows by keys for minutes", GroupByKey.<String, Observation>create());
 
-        /*PCollection<KV<String, Iterable<Observation>>>  group = obs
-                .apply(GroupByKey.<String, Observation>create());
-        PCollection<Long> sizes = group.apply(ParDo.of(new PrintGBKFn()));*/
+        // window for hours
+        PCollection<KV<String, Observation>> observationsPerHour = observations
+                .apply("Aggregation Window for hours", Window.configure().<KV<String, Observation>>into(
+                FullTimeInterval.withAggregator(
+                        new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.hours))
+        ));
+        PCollection<KV<String, Iterable<Observation>>> groupedObservationsPerHour = observationsPerHour
+                .apply("Group windows by keys for hours", GroupByKey.<String, Observation>create());
 
-        PCollection<AggregatedObservation> aggr = gbk
-                .apply(ParDo.of(
-                        new AggregateAvg(
+        // Apply aggregators
+        // There are two windows, minutes and hours
+        PCollection<AggregatedObservation> aggrPerHour = groupedObservationsPerMinute
+                .apply("Aggregator", ParDo.of(
+                        new AggregateAll(
+                                new Aggregator(Aggregator.AggregatorType.AVG, Aggregator.AggregatorUnit.hours))));
+        PCollection<AggregatedObservation> aggrPerMinute = groupedObservationsPerMinute
+                .apply("Aggregator", ParDo.of(
+                        new AggregateAll(
                                 new Aggregator(Aggregator.AggregatorType.AVG, Aggregator.AggregatorUnit.minutes))));
-        PCollection<Long> aggrValues = aggr.apply(ParDo.of(new PrintAggregationResultFn()));
-        PCollection<KV<String, Observation>> sendobs = aggr.apply(ParDo.of(new SendObservation(conf)));
-        sendobs.apply(kafkaSink.getTransform());
+        // debugging output
+        //aggrPerMinute.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
+        aggrPerHour.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
+        aggrPerMinute.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
+        //groupedObservationsPerMinute.apply("Debug output", ParDo.of(new PrintGBKFn()));
+       // groupedObservationsPerHour.apply("Debug output", ParDo.of(new PrintGBKFn()));
 
-        //aggr.setCoder(SerializableCoder.of(KV<String.class, Observation.class>));
+        // Prepare observations and send down the Kafka Sink
+        aggrPerMinute.apply("Prepare Observation for sending", ParDo.of(new SendObservation(conf))).apply("Kafka Sink", kafkaSink.getTransform());
+        aggrPerHour.apply("Prepare Observation for sending", ParDo.of(new SendObservation(conf))).apply("Kafka Sink", kafkaSink.getTransform());
+
 
         //Heartbeat Pipeline
         //Send regular Heartbeat to Kafka topic
@@ -97,9 +123,10 @@ public final class FullPipelineBuilder {
                 Aggregator aggr = c.element().getAggregator();
                 Observation obs = c.element().getObservation();
                 System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue() +
-                        ", key " + obs.getCid() + ", window(" +
-                        aggr.getWindowDuration());
+                        ", key " + obs.getCid() + ", window(" + aggr.getWindowDuration() + ","
+                        + aggr.getWindowStartTime(Instant.ofEpochMilli(obs.getOn())) + ") now:" + Instant.now());
                 c.output(Long.valueOf(0));
+
             }
         }
 
@@ -139,15 +166,6 @@ public final class FullPipelineBuilder {
             /*KafkaRecord<String, byte[]> record = c.element();
             Gson g = new Gson();*/
             ObservationList observations = c.element().getKV().getValue();
-            /*try {
-                Observation observation = g.fromJson(new String(record.getKV().getValue()), new TypeToken<Observation>() {
-                }.getType());
-                observations.add(observation);
-            } catch (JsonSyntaxException e) {
-                LOG.debug("Parsing single observation failed. Now trying to parse List<Observation>: " + e);
-                observations = g.fromJson(new String(record.getKV().getValue()), new TypeToken<List<Observation>>() {
-                }.getType());
-            }*/
 
             observations.getObservationList().forEach((obs) -> {
                 if (! obs.getCid().contains(serviceName)) {
