@@ -24,7 +24,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
@@ -37,7 +36,7 @@ import java.io.Serializable;
 import java.util.*;
 
 
-public class KafkaObservationSource implements Serializable{
+public class KafkaObservationSource implements Serializable {
 
     private KafkaIO.Read<String, ObservationList> transform = null;
 
@@ -68,10 +67,10 @@ public class KafkaObservationSource implements Serializable{
 
 
     public class CustomTimestampPolicy extends TimestampPolicy<String, ObservationList> implements Serializable {
-        Logger LOG = LogHelper.getLogger(KafkaObservationSource.class);
+        private final Logger log = LogHelper.getLogger(KafkaObservationSource.class);
 
-        Instant watermark = new Instant(0);
-        Instant lastTime = Instant.now();
+        private Instant watermark = new Instant(0);
+        private Instant lastTime = Instant.now();
 
         public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, ObservationList> record) {
             List<Observation> obsList = record.getKV().getValue().getObservationList();
@@ -80,7 +79,7 @@ public class KafkaObservationSource implements Serializable{
 
             if (minTimestamp > watermark.getMillis() && minTimestamp <= Instant.now().getMillis()) {
                 watermark = new Instant().withMillis(minTimestamp);
-                LOG.debug("New watermark: {}, key {}", watermark, obsList.get(0).getCid());
+                log.debug("New watermark: {}, key {}", watermark, obsList.get(0).getCid());
             }
             return Instant.ofEpochMilli(minTimestamp);
             //return watermark;
@@ -98,7 +97,7 @@ public class KafkaObservationSource implements Serializable{
         }
     }
 
-    public class CustomTimestampPolicyFactory implements TimestampPolicyFactory<String, ObservationList>, Serializable{
+    public class CustomTimestampPolicyFactory implements TimestampPolicyFactory<String, ObservationList>, Serializable {
         public TimestampPolicy createTimestampPolicy(TopicPartition tp, Optional<Instant> previousWatermark) {
             return new CustomTimestampPolicy();
         }

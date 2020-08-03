@@ -11,9 +11,10 @@ import org.joda.time.Instant;
 
 public class SendObservation extends DoFn<AggregatedObservation, KV<String, Observation>> {
 
-    String serviceName;
+    private String serviceName;
+    private static final String DOT = ".";
     public SendObservation(Map<String, Object> config) {
-        this.serviceName = (String)config.get(Config.SERVICE_NAME);
+        this.serviceName = (String) config.get(Config.SERVICE_NAME);
     }
     @ProcessElement
     public void processElement(ProcessContext c) {
@@ -21,7 +22,7 @@ public class SendObservation extends DoFn<AggregatedObservation, KV<String, Obse
         Observation obs = new Observation(aggrObservation.getObservation());
         Aggregator aggr = aggrObservation.getAggregator();
         String cid = aggrObservation.getObservation().getCid();
-        obs.setCid(cid + "." + serviceName + "." + aggr.getType() + "." + aggr.getUnit());
+        obs.setCid(cid + DOT + serviceName + DOT + aggr.getType() + DOT + aggr.getUnit());
         Long fullTimeMillis = aggr.getWindowStartTime(Instant
                                 .ofEpochMilli(aggrObservation.getObservation().getOn())).getMillis();
         Long durationMillis = Math.round(aggr.getWindowDuration().getMillis() / 2.0);

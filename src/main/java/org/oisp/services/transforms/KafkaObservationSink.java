@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class KafkaObservationSink implements Serializable{
+public class KafkaObservationSink implements Serializable {
 
     private KafkaIO.Write<String, Observation> transform = null;
 

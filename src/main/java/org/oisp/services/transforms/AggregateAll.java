@@ -10,19 +10,26 @@ import org.oisp.services.utils.LogHelper;
 import org.slf4j.Logger;
 
 public class AggregateAll extends DoFn<KV<String, Iterable<Observation>>, AggregatedObservation> {
-
-    Aggregator aggregator;
+    private Aggregator aggregator;
 
     public AggregateAll(Aggregator aggregator) {
         this.aggregator = aggregator;
     }
-    Logger LOG = LogHelper.getLogger(AggregateAll.class);
+    private static final Logger LOG = LogHelper.getLogger(AggregateAll.class);
+    private void sendObservation(Aggregator.AggregatorType type, Observation immutableObs, ProcessContext c, Object value) {
+        if (aggregator.getType() == type || aggregator.getType() == Aggregator.AggregatorType.ALL) {
+            Observation newObs = new Observation(immutableObs);
+            newObs.setValue(value.toString());
+            Aggregator newAggr = new Aggregator(type, aggregator.getUnit());
+            c.output(new AggregatedObservation(newObs, newAggr));
+        }
+    }
     @ProcessElement
     public void processElement(ProcessContext c, PaneInfo paneInfo) {
         Iterable<Observation> itObs  = c.element().getValue();
         Observation firstObs = itObs.iterator().next();
         if (firstObs.isNumber()) {
-            Long count = 0l;
+            Long count = 0L;
             Double min = Double.MAX_VALUE;
             Double max = Double.MIN_VALUE;
             Double accum = 0.0;
@@ -39,7 +46,13 @@ public class AggregateAll extends DoFn<KV<String, Iterable<Observation>>, Aggreg
             }
 
             Double avg = accum / count;
-            if (aggregator.getType() == Aggregator.AggregatorType.AVG || aggregator.getType() == Aggregator.AggregatorType.ALL) {
+            Observation immutableObs = itObs.iterator().next();
+            sendObservation(Aggregator.AggregatorType.AVG, immutableObs, c, avg);
+            sendObservation(Aggregator.AggregatorType.SUM, immutableObs, c, accum);
+            sendObservation(Aggregator.AggregatorType.MIN, immutableObs, c, min);
+            sendObservation(Aggregator.AggregatorType.MAX, immutableObs, c, max);
+            sendObservation(Aggregator.AggregatorType.COUNT, immutableObs, c, count);
+            /*if (aggregator.getType() == Aggregator.AggregatorType.AVG || aggregator.getType() == Aggregator.AggregatorType.ALL) {
                 Observation avgObs = new Observation(itObs.iterator().next());
                 avgObs.setValue(avg.toString());
                 Aggregator newAggr = new Aggregator(Aggregator.AggregatorType.AVG, aggregator.getUnit());
@@ -72,7 +85,7 @@ public class AggregateAll extends DoFn<KV<String, Iterable<Observation>>, Aggreg
                 Aggregator newAggr = new Aggregator(Aggregator.AggregatorType.COUNT, aggregator.getUnit());
                 LOG.debug("Aggregated COUNT value: {}", countObs.getValue());
                 c.output(new AggregatedObservation(countObs, newAggr));
-            }
+            }*/
         }
     }
 }

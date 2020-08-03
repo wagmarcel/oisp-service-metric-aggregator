@@ -5,13 +5,10 @@ import com.google.common.collect.Iterators;
 
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
-import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.windowing.AfterProcessingTime;
-import org.apache.beam.sdk.transforms.windowing.AfterWatermark;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -21,10 +18,17 @@ import org.joda.time.Duration;
 import org.apache.beam.sdk.Pipeline;
 import org.oisp.services.collections.AggregatedObservation;
 import org.oisp.services.collections.Observation;
-import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
-import org.oisp.services.transforms.*;
+import org.oisp.services.transforms.KafkaToFilteredObservationFn;
+import org.oisp.services.transforms.AggregateAll;
+import org.oisp.services.transforms.KafkaObservationSource;
+import org.oisp.services.transforms.KafkaObservationSink;
+import org.oisp.services.transforms.KafkaObservationsSourceProcessor;
+import org.oisp.services.transforms.KafkaObservationsSinkProcessor;
+import org.oisp.services.transforms.SendObservation;
+
+
 import org.oisp.services.utils.LogHelper;
 import org.oisp.services.windows.FullTimeInterval;
 import org.slf4j.Logger;
@@ -40,6 +44,7 @@ import static org.apache.beam.sdk.Pipeline.create;
 
 public final class FullPipelineBuilder {
 
+    private final static String AGGREGATOR = "aggregator";
     private static final Logger LOG = LogHelper.getLogger(FullPipelineBuilder.class);
     private FullPipelineBuilder() {
     }
@@ -79,27 +84,23 @@ public final class FullPipelineBuilder {
                 .apply("Aggregation Window for hours", Window.configure().<KV<String, Observation>>into(
                 FullTimeInterval.withAggregator(
                         new Aggregator(Aggregator.AggregatorType.NONE, Aggregator.AggregatorUnit.hours))
-        )/*.triggering(AfterWatermark.pastEndOfWindow()).withAllowedLateness(Duration.standardHours(0)).accumulatingFiredPanes()*/
-                );
+        ));
         PCollection<KV<String, Iterable<Observation>>> groupedObservationsPerHour = observationsPerHour
                 .apply("Group windows by keys for hours", GroupByKey.<String, Observation>create());
 
         // Apply aggregators
         // There are two windows, minutes and hours
         PCollection<AggregatedObservation> aggrPerHour = groupedObservationsPerMinute
-                .apply("Aggregator", ParDo.of(
+                .apply(AGGREGATOR, ParDo.of(
                         new AggregateAll(
                                 new Aggregator(Aggregator.AggregatorType.ALL, Aggregator.AggregatorUnit.minutes))));
         PCollection<AggregatedObservation> aggrPerMinute = groupedObservationsPerHour
-                .apply("Aggregator", ParDo.of(
+                .apply(AGGREGATOR, ParDo.of(
                         new AggregateAll(
                                 new Aggregator(Aggregator.AggregatorType.ALL, Aggregator.AggregatorUnit.hours))));
         // debugging output
-        //aggrPerMinute.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
         aggrPerHour.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
         aggrPerMinute.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
-        //groupedObservationsPerMinute.apply("Debug output", ParDo.of(new PrintGBKFn()));
-       // groupedObservationsPerHour.apply("Debug output", ParDo.of(new PrintGBKFn()));
 
         // Prepare observations and send down the Kafka Sink
         aggrPerMinute.apply("Prepare Observation for sending", ParDo.of(new SendObservation(conf))).apply("Kafka Sink", kafkaSink.getTransform());
@@ -108,7 +109,7 @@ public final class FullPipelineBuilder {
 
         //Heartbeat Pipeline
         //Send regular Heartbeat to Kafka topic
-        /*String serverUri = conf.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
+        String serverUri = conf.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
         System.out.println("serverUri:" + serverUri);
         p.apply(GenerateSequence.from(0).withRate(1, Duration.standardSeconds(1)))
                 .apply(ParDo.of(new StringToKVFn()))
@@ -116,10 +117,12 @@ public final class FullPipelineBuilder {
                         .withBootstrapServers(serverUri)
                         .withTopic("heartbeat")
                         .withKeySerializer(StringSerializer.class)
-                        .withValueSerializer(StringSerializer.class));*/
+                        .withValueSerializer(StringSerializer.class));
         return p;
     }
 
+
+    // Helper function for Kafka conversions
     static class PrintAggregationResultFn extends DoFn<AggregatedObservation, Long> {
         @ProcessElement
         public void processElement(ProcessContext c) {
@@ -157,27 +160,6 @@ public final class FullPipelineBuilder {
             c.output(Long.valueOf(elements));
         }
     }
-
-    // Distribute elements with cid key
-    // Filter out already aggregated values
-    /*static class KafkaToFilteredObservationFn extends DoFn<KafkaRecord<String, ObservationList>, KV<String, Observation>> {
-        String serviceName;
-        KafkaToFilteredObservationFn(Map<String, Object> conf) {
-            serviceName = (String) conf.get(Config.SERVICE_NAME);
-        }
-        @ProcessElement
-        public void processElement(ProcessContext c, @Timestamp Instant inputTimestamp) {
-            ObservationList observations = c.element().getKV().getValue();
-
-            observations.getObservationList().forEach((obs) -> {
-                if (! obs.getCid().contains(serviceName)) {
-                    Instant timestamp = new Instant().withMillis(obs.getOn());
-                    Instant now = Instant.now();
-                    c.output(KV.of(obs.getCid(), obs));
-                }
-            });
-        }
-    }*/
 
     static class StringToKVFn extends DoFn<Long, KV<String, String>> {
         @DoFn.ProcessElement
