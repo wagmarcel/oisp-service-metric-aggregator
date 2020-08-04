@@ -70,28 +70,19 @@ public class KafkaObservationSource implements Serializable {
         private final Logger log = LogHelper.getLogger(KafkaObservationSource.class);
 
         private Instant watermark = new Instant(0);
-        private Instant lastTime = Instant.now();
 
         public Instant	getTimestampForRecord(TimestampPolicy.PartitionContext ctx, KafkaRecord<String, ObservationList> record) {
             List<Observation> obsList = record.getKV().getValue().getObservationList();
             Long minTimestamp = obsList.stream().map((obs) -> obs.getOn()).reduce(Long.MAX_VALUE, (minimum, element) -> minimum > element ? element : minimum);
-            String cid = record.getKV().getKey();
 
             if (minTimestamp > watermark.getMillis() && minTimestamp <= Instant.now().getMillis()) {
                 watermark = new Instant().withMillis(minTimestamp);
                 log.debug("New watermark: {}, key {}", watermark, obsList.get(0).getCid());
             }
             return Instant.ofEpochMilli(minTimestamp);
-            //return watermark;
 
         }
         public Instant getWatermark(TimestampPolicy.PartitionContext ctx) {
-            /*Duration advanceTimestamp = Duration.millis(Instant.now().getMillis() - lastTime.getMillis());
-            Instant newWatermark = watermark.plus(advanceTimestamp);
-            if (newWatermark.getMillis() > Instant.now().getMillis()) {
-                newWatermark = Instant.now();
-            }
-            System.out.println("Watermark " + newWatermark);*/
 
             return watermark;
         }

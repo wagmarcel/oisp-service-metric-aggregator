@@ -10,12 +10,12 @@ public class ObservationList implements Serializable {
         return observationList;
     }
 
-    public ObservationList(){
+    public ObservationList() {
         observationList = new ArrayList<Observation>();
     }
     public void setObservationList(List<Observation> observationList) {
         this.observationList = observationList;
     }
 
-    List<Observation> observationList;
+    private List<Observation> observationList;
 }

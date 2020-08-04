@@ -26,7 +26,11 @@ import java.util.Map;
 
 public class Observation implements Serializable {
 
-    public Observation(){}
+    private static final String BYTEARRAY = "ByteArray";
+    private static final String NUMBER = "Number";
+    private static final String STRING = "String";
+    public Observation() {
+    }
     private String aid;
     private String cid;
     private Long on;
@@ -36,24 +40,24 @@ public class Observation implements Serializable {
     private Map<String, String> attributes;
     private String dataType;
 
-    public  boolean isNumber(){
-        return this.dataType.equals("Number");
+    public  boolean isNumber() {
+        return NUMBER.equals(this.dataType);
     }
     public void setDataTypeString() {
-        this.dataType = "String";
+        this.dataType = STRING;
     }
     public void setDataTypeNumber() {
-        this.dataType = "Number";
+        this.dataType = NUMBER;
     }
     public void setDataTypeByteArray() {
-        this.dataType = "ByteArray";
+        this.dataType = BYTEARRAY;
     }
     public void setDataTypeBoolean() {
-        this.dataType = "Boolean";
+        this.dataType = BYTEARRAY;
     }
 
-    public  boolean isByteArray(){
-        return this.dataType.equals("ByteArray");
+    public  boolean isByteArray() {
+        return BYTEARRAY.equals(this.dataType);
     }
 
     public String getDataType() {

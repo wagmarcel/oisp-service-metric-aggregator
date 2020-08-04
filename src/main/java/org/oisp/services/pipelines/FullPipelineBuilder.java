@@ -22,16 +22,13 @@ import org.oisp.services.conf.Config;
 import org.oisp.services.dataStructures.Aggregator;
 import org.oisp.services.transforms.KafkaToFilteredObservationFn;
 import org.oisp.services.transforms.AggregateAll;
-import org.oisp.services.transforms.KafkaObservationSource;
 import org.oisp.services.transforms.KafkaObservationSink;
 import org.oisp.services.transforms.KafkaObservationsSourceProcessor;
 import org.oisp.services.transforms.KafkaObservationsSinkProcessor;
 import org.oisp.services.transforms.SendObservation;
 
 
-import org.oisp.services.utils.LogHelper;
 import org.oisp.services.windows.FullTimeInterval;
-import org.slf4j.Logger;
 
 import org.joda.time.Instant;
 
@@ -44,8 +41,10 @@ import static org.apache.beam.sdk.Pipeline.create;
 
 public final class FullPipelineBuilder {
 
-    private final static String AGGREGATOR = "aggregator";
-    private static final Logger LOG = LogHelper.getLogger(FullPipelineBuilder.class);
+    private static final String DEBUG_OUTPUT = "Debug output";
+    private static final String AGGREGATOR = "aggregator";
+    private static final String PREPARE_OBSERVATION_FOR_SENDING = "Prepare Observation for sending";
+    private static final String KAFKA_SINK = "Kafka Sink";
     private FullPipelineBuilder() {
     }
 
@@ -99,12 +98,12 @@ public final class FullPipelineBuilder {
                         new AggregateAll(
                                 new Aggregator(Aggregator.AggregatorType.ALL, Aggregator.AggregatorUnit.hours))));
         // debugging output
-        aggrPerHour.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
-        aggrPerMinute.apply("Debug output", ParDo.of(new PrintAggregationResultFn()));
+        aggrPerHour.apply(DEBUG_OUTPUT, ParDo.of(new PrintAggregationResultFn()));
+        aggrPerMinute.apply(DEBUG_OUTPUT, ParDo.of(new PrintAggregationResultFn()));
 
         // Prepare observations and send down the Kafka Sink
-        aggrPerMinute.apply("Prepare Observation for sending", ParDo.of(new SendObservation(conf))).apply("Kafka Sink", kafkaSink.getTransform());
-        aggrPerHour.apply("Prepare Observation for sending", ParDo.of(new SendObservation(conf))).apply("Kafka Sink", kafkaSink.getTransform());
+        aggrPerMinute.apply(PREPARE_OBSERVATION_FOR_SENDING, ParDo.of(new SendObservation(conf))).apply(KAFKA_SINK, kafkaSink.getTransform());
+        aggrPerHour.apply(PREPARE_OBSERVATION_FOR_SENDING, ParDo.of(new SendObservation(conf))).apply(KAFKA_SINK, kafkaSink.getTransform());
 
 
         //Heartbeat Pipeline
@@ -129,8 +128,8 @@ public final class FullPipelineBuilder {
             if (c.element() != null) {
                 Aggregator aggr = c.element().getAggregator();
                 Observation obs = c.element().getObservation();
-                System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue() +
-                        ", key " + obs.getCid() + ", window(" + aggr.getWindowDuration() + ","
+                System.out.println("Result of aggregator: aggr " + aggr.getType() + ", value: " + obs.getValue()
+                        + ", key " + obs.getCid() + ", window(" + aggr.getWindowDuration() + ","
                         + aggr.getWindowStartTime(Instant.ofEpochMilli(obs.getOn())) + ") now:" + Instant.now());
                 c.output(Long.valueOf(0));
 
@@ -148,7 +147,7 @@ public final class FullPipelineBuilder {
             Iterator<Observation> it = observations.iterator();
             Integer elements = Iterators.size(it);
             System.out.print("key " + key + " size " + elements + "=> ");
-            for(Iterator<Observation> iter = observations.iterator(); iter.hasNext(); ) {
+            for (Iterator<Observation> iter = observations.iterator(); iter.hasNext();) {
                 Observation obs = iter.next();
                 if (!obs.isByteArray()) {
                     System.out.print(obs.getValue() + ", " + Instant.ofEpochMilli(obs.getOn()) + ";");

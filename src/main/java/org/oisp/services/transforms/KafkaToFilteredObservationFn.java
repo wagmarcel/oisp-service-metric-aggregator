@@ -4,7 +4,6 @@ package org.oisp.services.transforms;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
-import org.joda.time.Instant;
 import org.oisp.services.collections.Observation;
 import org.oisp.services.collections.ObservationList;
 import org.oisp.services.conf.Config;
@@ -19,13 +18,11 @@ public class KafkaToFilteredObservationFn extends DoFn<KafkaRecord<String, Obser
         serviceName = (String) conf.get(Config.SERVICE_NAME);
     }
     @ProcessElement
-    public void processElement(ProcessContext c, @Timestamp Instant inputTimestamp) {
+    public void processElement(ProcessContext c) {
         ObservationList observations = c.element().getKV().getValue();
 
         observations.getObservationList().forEach((obs) -> {
             if (!obs.getCid().contains(serviceName)) {
-                Instant timestamp = new Instant().withMillis(obs.getOn());
-                Instant now = Instant.now();
                 c.output(KV.of(obs.getCid(), obs));
             }
         });

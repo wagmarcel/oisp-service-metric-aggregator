@@ -12,27 +12,27 @@ import java.util.List;
 
 public class ObservationDeserializer implements Deserializer<ObservationList> {
 
-    public ObservationDeserializer(){}
-    public void configure(java.util.Map<java.lang.String,?> configs,
-                          boolean isKey) {
+    public ObservationDeserializer() {
     }
 
-    public void close(){
+    public void configure(java.util.Map<String, ?> configs, boolean isKey) {
     }
 
-    public ObservationList deserialize(java.lang.String topic,
+    public void close() {
+    }
+
+    public ObservationList deserialize(String topic,
                                        byte[] data) {
         Gson g = new Gson();
         List<Observation> observations = new ArrayList<Observation>();
-            try {
-                Observation observation = g.fromJson(new String(data), new TypeToken<Observation>() {
-                }.getType());
-                observations.add(observation);
-            } catch (JsonSyntaxException e) {
-                //LOG.debug("Parsing single observation failed. Now trying to parse List<Observation>: " + e);
-                observations = g.fromJson(new String(data), new TypeToken<List<Observation>>() {
-                }.getType());
-            }
+        try {
+            Observation observation = g.fromJson(new String(data), new TypeToken<Observation>() {
+            }.getType());
+            observations.add(observation);
+        } catch (JsonSyntaxException e) {
+            observations = g.fromJson(new String(data), new TypeToken<List<Observation>>() {
+            }.getType());
+        }
         ObservationList obsList = new ObservationList();
         obsList.setObservationList(observations);
         return obsList;

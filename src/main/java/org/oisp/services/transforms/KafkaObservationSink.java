@@ -24,7 +24,6 @@ import org.oisp.services.conf.Config;
 import org.oisp.services.utils.ObservationSerializer;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 
 
@@ -39,11 +38,6 @@ public class KafkaObservationSink implements Serializable {
     public KafkaObservationSink(Map<String, Object> userConfig, String topic) {
 
         String serverUri = userConfig.get(Config.KAFKA_BOOTSTRAP_SERVERS).toString();
-
-        Map<String, Object> consumerProperties = new HashMap<>();
-        /*consumerProperties.put("group.id", "aggregator");
-        consumerProperties.put("enable.auto.commit", "true");
-        consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");*/
 
         transform = KafkaIO.<String, Observation>write()
                 .withBootstrapServers(serverUri)

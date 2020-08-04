@@ -8,7 +8,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 public class Aggregator implements Serializable {
-    public enum AggregatorType{
+    public enum AggregatorType {
         NONE,
         ALL,
         AVG,
@@ -17,7 +17,7 @@ public class Aggregator implements Serializable {
         MAX,
         MIN
     }
-    public enum AggregatorUnit{
+    public enum AggregatorUnit {
         minutes,
         hours
     }
@@ -64,7 +64,7 @@ public class Aggregator implements Serializable {
         return startTimeOfWindow;
     }
 
-    public Duration getWindowDuration(){
+    public Duration getWindowDuration() {
         Duration windowDuration;
         switch (unit) {
             case hours:
